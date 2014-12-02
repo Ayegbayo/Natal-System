@@ -1,0 +1,359 @@
+<?php
+/**
+ * 1. This is for the documentation of the whole code file
+ * meditell
+ *
+ * An application/platform that helps in drug reminding.
+ *
+ * @package		meditell
+ * @author		Meditell Nigeria Product Development Team
+ * @copyright	Copyright (c) 2014, Meditell Nigeria.
+ * @link		http://meditell.com.ng
+ * @since		Version 1.0 (alpha)
+ * @filesource
+ */
+
+// ------------------------------------------------------------------------
+
+/**
+ * meditell HospitalController/Controller
+ *
+ * This class serves as a controller for the Hospital
+ * 
+ *
+ * @package		meditell
+ * @subpackage	Models
+ * @category	Models
+ * @author		Ayegbayo Olutimileyin
+ * @Note: 		Proper OOP should be implemented.
+ * @link		http://twitter.com/_asquo
+ */
+	
+	class HospitalController extends CI_Controller
+	{
+			var $data = array();
+			function __construct()
+			{
+				parent::__construct();
+				$this->load->helper('form');
+				$this->load->library('form_validation');
+				$this->load->model('HospitalModel');
+				
+			}
+			
+			
+			function index()
+			{
+				$this->load->view('templates/header');
+				$this->load->view('pages/home');
+				$this->load->view('templates/footer');
+			}
+			
+		///<summary>
+		///Function Name: createAppointmentType
+		///Controller function for: HospitalModel::createAppointmentType
+		///Parameters: none
+		///</summary>	
+			function createAppointmentType()
+			{
+				$this->form_validation->set_rules('title','Title','required');
+				$this->form_validation->set_rules('description','Description','required');
+				if ($this->form_validation->run() === FALSE)
+				{
+					$this->load->view('pages/home');	
+				}
+				else
+				{
+					echo "Appointment Successfully Created";
+					$this->HospitalModel->createAppointmentType($this->input->post('title'),$this->input->post('description'));	
+				}
+			}
+			
+			
+		///<summary>
+		///Function Name: viewAppointment
+		///Controller function for: HospitalModel::viewAppointment
+		///Parameters: none
+		///</summary>		
+			function viewAppointments()
+			{	
+				$result = $this->HospitalModel->viewAppointments(NULL);
+				if(sizeof($result) == 0)
+				{
+					$this->data['row'] = "<p align='center'>Sorry, There are no Appointment Fixed for a Patient Registered in your Hospital by this Time!</p>";
+					$this->load->view("templates/header");
+					$this->load->view("pages/view_appointments",$this->data);
+					$this->load->view("templates/footer");
+				}				
+				else
+				{					
+					$this->data['row'] = $result;
+					$this->load->view("templates/header");
+					$this->load->view("pages/view_appointments",$this->data);
+					$this->load->view("templates/footer");
+				}
+			}
+			
+			
+		///<summary>
+		///Function Name: editAppointment
+		///Helps the user to edit Appointment from the view
+		///Parameters: none
+		///</summary>	
+			function editAppointment()
+			{
+				$this->form_validation->set_rules('patient_id','Patient Id','required');
+				$this->form_validation->set_rules('hour', 'Hour','required');
+				$this->form_validation->set_rules('minute', 'Minute','required');
+				$this->form_validation->set_rules('day', 'Day','required');
+				$this->form_validation->set_rules('year', 'Year','required');
+				$this->form_validation->set_rules('month', 'Month','required');
+				$this->form_validation->set_rules('appointmenttype','Type','required');
+				$this->form_validation->set_rules('doctor','Doctor','required');
+				if($this->form_validation->run() === FALSE)
+				{
+					$this->editAppointmentform();
+				}
+				else
+				{
+					$this->HospitalModel->editAppointment($this->input->post('appointment_id'),$this->input->post('doctor'),$this->input->post('patient_id'),$this->input->post('hour'),$this->input->post('minute'),$this->input->post('day'),$this->input->post('month'),$this->input->post('year'),$this->input->post('appointmenttype'));
+					$this->viewAppointments();
+				}				
+			}
+			
+			function msg()
+			{
+				echo $this->NatalHospitalModel->preparePregnancyTips();
+			}
+		
+		///<summary>
+		///Function Name: setAppointmentForm
+		///Helps to load form for setting an appointment for patients 
+		///Parameters: none
+		///</summary>	
+			function setAppointmentForm()
+			{
+				$this->data['appointypes'] = $this->HospitalModel->viewAppointmentTypes(NULL);
+				$this->load->view("templates/header");
+				$this->load->view("pages/setappointment",$this->data);
+				$this->load->view("templates/footer");
+			}
+			
+		///<summary>
+		///Function Name: viewAppointment
+		///Helps the user to set an Appointment for a patient
+		///Parameters: none
+		///</summary>	
+			function setAppointment()
+			{
+				$this->form_validation->set_rules('patient_id','Patient Id','required');
+				$this->form_validation->set_rules('year','year','required');
+				$this->form_validation->set_rules('month','month','required');
+				$this->form_validation->set_rules('day','day','required');
+				$this->form_validation->set_rules('day','Appointment Day','required');
+				$this->form_validation->set_rules('month','Appointment Month','required');
+				$this->form_validation->set_rules('year','Appointment Year','required');
+				//$this->form_validation->set_rules('appointmentdate','Appointment Date','required');
+				$this->form_validation->set_rules('doctor','Doctor','required');
+				if ($this->form_validation->run() === FALSE)
+				{
+					$this->setAppointmentForm();
+				}
+				else
+				{
+					
+					$confirm = $this->HospitalModel->checkDoctorSchedule($this->input->post('doctor'),$this->input->post('appointmentdate'),$this->input->post('appointmenttime'));
+					if(sizeof($confirm) == 0)
+					{
+						if($this->input->post('notify')=="on")
+						{
+							$notify = 0;
+						}
+						else
+						{
+							$notify = -1;
+						}
+						$this->HospitalModel->setAppointment($this->input->post('appointmenttype'),$this->input->post('hour'),$this->input->post('minute'),$this->input->post('day'),$this->input->post('month'),$this->input->post('year'),$this->input->post('doctor'),$this->input->post('patient_id'),$notify,$this->input->post('meridian'));
+						echo "You have Successfully Created Appointments for this patient";
+					}
+					else
+					{
+						echo "An appointment can not be created for this Patient at this time because it has been scheduled for another patient. Pls Try Again!";
+					}
+				}
+			}
+
+		///<summary>
+		///Function Name: viewAppointmentTypes
+		///Helps the user to view the differnet Appointment Groups/Types used by the Hospital 
+		///Parameters: none
+		///</summary>
+			function viewAppointmentTypes()
+			{
+				$result = $this->HospitalModel->viewAppointmentTypes(NULL);
+				if(sizeof($result) == 0)
+				{
+					$this->data['appointment_results'] = "No Appointment Type has been created for Your Hospital at this time. ";
+				}				
+				else
+				{
+					$this->data['appointment_results'] = form_open('HospitalController/deleteAppointmentType')."<p align='center'><table border = '1px'>
+					<tr>
+						<td>Appointment Name</td>
+						<td>Appointment Time</td>
+						<td>Description</td>
+						<td>Actions</td>
+					</tr>
+					";
+					
+					foreach($result as $row)
+					{
+						$this->data['appointment_results'].= "<tr>
+							<td>".$row->appointment_name."</td>
+							<td>".$row->appointment_type_id."</td>
+							<td>".$row->description."</td>
+							<td><input type='submit' name = 'edit' id='edit' value='Edit'/>
+							<input type='hidden' name = 'appointmentTypeId' id='appointmentTypeId' value=".$row->appointment_type_id.">
+							<input type='submit' name = 'delete' id='delete' value='Delete'/></td>
+						</tr>";
+					}
+					$this->data['appointment_results'].="</table></form>";		
+				}					
+					$this->load->view("templates/header");
+					$this->load->view("pages/view_appointment_types",$this->data);
+					$this->load->view("templates/footer");
+			}
+			
+		function editAppointmentTypeform()
+		{	
+			$this->data['editappointmentType'] = $this->HospitalModel->viewAppointmentTypes($this->input->post('appointmentTypeId'));
+			$this->load->view("templates/header");
+			$this->load->view("pages/edit_appointment_type",$this->data);
+			$this->load->view("templates/footer");
+		}	
+		
+		
+		function editAppointmentType()
+		{
+			$this->HospitalModel->editAppointmentTypes($this->input->post('title'),$this->input->post('appointment_type_id'),$this->input->post('description'));
+			$this->viewAppointmentTypes();
+		}
+
+		
+		///<summary>
+		///Function Name: deleteAppointmentType
+		///Helps the user to delete an Appointment Group/type
+		///Parameters: none
+		///</summary>	
+		function deleteAppointmentType()
+		{
+			//Confirm if data should be deleted b4 deletion with js.
+			if($this->input->post('edit') == 'Edit')
+			{
+				$this->editAppointmentTypeform();
+			}
+			elseif($this->input->post('delete' == 'Delete'))
+			{
+				$this->HospitalModel->deleteAppointmentType($this->input->post('appointmentTypeId'));
+				$this->viewAppointmentTypes();
+			}
+		}
+			
+		///<summary>
+		///Function Name: deleteAppointmentType
+		///Helps the USer to delete an Appointment
+		///Parameters: none
+		///</summary>	
+			function deleteAppointment()
+			{
+				if($this->input->post('edit') == 'Edit')
+				{
+					$this->editAppointmentform();
+				}
+				else if($this->input->post('delete') == 'Delete')
+				{				
+					$this->HospitalModel->deleteAppointment($this->input->post('appointment_id'));
+					$this->viewAppointments();
+				}
+			}
+		
+		///<summary>
+		///Function Name: editApplicationForm
+		///displays the editApplication page for the user.
+		///Parameters: none
+		///</summary>	
+		function editAppointmentform()
+		{
+			$this->data['appointmentType'] = $this->HospitalModel->viewAppointmentTypes(NULL);
+		    $this->data['editappointment'] = $this->HospitalModel->viewAppointments($this->input->post('appointmentTypeId'));
+			$this->load->view('templates/header');
+			$this->load->view('pages/editAppointment',$this->data);
+			$this->load->view('templates/footer');
+		}
+			
+			
+		///<summary>
+		///Function Name:scheduleform
+		///To display the form for checking doctors schedule
+		///Parameters: none
+		///</summary>
+		function scheduleform()
+		{
+			$this->data['appointment_results'] = "";
+			$this->load->view("templates/header");
+			$this->load->view("pages/checkschedule",$this->data);
+			$this->load->view("templates/footer");
+		}
+			
+		///<summary>
+		///Function Name: viewDoctorSchedule
+		///Helps the user to view a Doctor's schedule.
+		///Parameters: none
+		///</summary>
+		function viewDoctorSchedule()
+		{
+			$this->form_validation->set_rules('doctor',"Doctor's name",'required');
+			if($this->form_validation->run() === FALSE)
+			{
+					$this->scheduleform();
+			}
+			else
+			{
+				$result = $this->HospitalModel->checkDoctorSchedule($this->input->post('doctor'),$this->input->post('year'), $this->input->post('month'), $this->input->post('day'),$this->input->post('hour'),$this->input->post('minute'));	
+				if(sizeof($result) == 0)
+				{
+					$this->data['appointment_results'] = "<p align ='center'> No Appointment Meet this criteria. ";
+				}				
+				else
+				{
+					$this->data['appointment_results'] = form_open('HospitalController/editAppointmentform')."<p align='center'><table border = '1px'>
+					<tr>
+						<td>Patient Id</td>
+						<td>Appointment Date</td>
+						<td>Appointment Time</td>
+						<td>Appointment Type</td>
+						<td>Actions</td>
+					</tr>
+					";
+					
+					foreach($result as $row)
+					{
+						$this->data['appointment_results'] .= "<tr>
+						<td>".$row->patient_id."</td>
+						<td>".$row->appointment_day." ".$row->appointment_month." ".$row->appointment_year."</td>
+						<td>".$row->appointment_hour.":".$row->appointment_minute." ".$row->meridian."</td>
+						<td>".$row->appointment_type."</td>
+						<td><input type='submit' name='edit' id = 'edit' value='Edit'/>
+						<input type='hidden' name = 'appointmentTypeId' id='appointmentTypeId' value=".$row->appointment_id.">
+						<input type='submit' name = 'delete' id='delete' value='Delete'></td>
+						</tr>";
+					}
+					$this->data['appointment_results'].="</table></form>";		
+				}
+				$this->load->view("templates/header");
+				$this->load->view("pages/checkschedule",$this->data);
+				$this->load->view("templates/footer");
+			}			
+		}
+	}
+?>
