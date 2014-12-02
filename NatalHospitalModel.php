@@ -1,0 +1,244 @@
+<?php
+/**
+ * 1. This is for the documentation of the whole code file
+ * meditell
+ *
+ * An application/platform that helps in drug reminding.
+ *
+ * @package		meditell
+ * @author		Meditell Nigeria Product Development Team
+ * @copyright	Copyright (c) 2014, Meditell Nigeria.
+ * @link		http://meditell.com.ng
+ * @since		Version 1.0 (alpha)
+ * @filesource
+ */
+
+// ------------------------------------------------------------------------
+
+/**
+ * meditell NatalHospitalModel/Model
+ *
+ * This class serves as a controller for the Hospital
+ * 
+ *
+ * @package		meditell
+ * @subpackage	Models
+ * @category	Models
+ * @author		Ayegbayo Olutimileyin
+ * @Note: 		Proper OOP should be implemented.
+ * @link		http://twitter.com/_asquo
+ */
+	
+	class NatalHospitalModel extends CI_MOdel
+	{
+		var $hospitalId = 'H1001';
+		function __construct()
+		{
+			parent::__construct();
+			$this->load->database();
+		}
+		
+		///<summary>
+		///Function Name: registerPatient
+		/// Helps Hospital to register  Pregnant Patient.
+		///Parameters: 
+		///	$patientFirstname: the firstname of the Pregnant Patient
+		///	$patientSurname: Surname of the Pregnant Patient 
+		///	$patientAfe: the Age of the Pregnant Patient
+		///	$pregnancyAge: The pregnancy age (How long has the patient been pregnant)
+		///	$advicetype: the type of advice the patient should be registered for.
+		/// $mobileNumber: the mobile number of the patient
+		///	$vacTips: denotes whether the patient is registering for Vaccine tips
+		/// $pregTips: denotes whether the patient is registering for Pregnancy Tips
+		///</summary>	
+		function registerPatient($patientFirstname,$patientSurname,$patientAge,$pregnancyAge,$advicetype,$mobileNumber,$vacTips,$pregTips)
+		{
+			$currentdate = new DateTime();
+			$duedate = 38-$pregnancyAge;
+			$this->db->set('patient_firstname',$patientFirstname);
+			$this->db->set('patient_surname',$patientSurname);
+			$this->db->set('patient_age',$patientAge);
+			$this->db->set('pregnancy_age',$pregnancyAge);
+			$this->db->set('advice_type',$advicetype);
+			$this->db->set('mobile_number',$mobileNumber);
+			$this->db->set('hospital_id',$this->hospitalId);
+			$this->db->set('vaccine_tips',$vacTips);
+			$this->db->set('pregnancy_tips',$pregTips);
+			$this->db->set('registration_date',$currentdate->format('Y-m-d'));
+			//$this->db->set('due_date','Dateadd(week,'.$duedate.',CURDATE())');
+			$this->db->insert('patients');
+		}
+		
+		///<summary>
+		///Function Name: viewRegisterPatient
+		/// Helps Hospital to view all registered Pregnant Patients.
+		///Parameters: none
+		///</summary>
+		function viewRegisteredPatients()
+		{
+			$this->db->where('hospital_id',$this->hospitalId);
+			$query = $this->db->get('patients');
+			return $query->result();
+		}
+		
+		///<summary>
+		///Function Name: updatepregnancydata
+		/// Helps manage the increase in the pregnancy age
+		///Parameters: none
+		///</summary>
+		function updatepregnancydata()
+		{
+			$result = $this->viewRegisteredPatients();
+			$currentdate = new DateTime();
+			$periodsincereg = 0;
+			
+			foreach ($result as $value)
+			{
+				$periodsincereg = ceil(abs(strtotime($currentdate->format('Y-m-d')) - strtotime($value->registration_date))/86400/7);
+				if($value->pregnancy_age < 42 and $value->last_update_date != $currentdate->format('Y-m-d'))
+				{
+					$this->db->set('pregnancy_age',$periodsincereg+$value->pregnancy_age);
+					$this->db->set('last_update_date',$currentdate->format('Y-m-d'));
+					$this->db->where('patient_id',$value->patient_id);
+					$this->db->update('patients');
+				}
+			}
+		}
+		
+		
+		///<summary>
+		///Function Name: newVaccine
+		/// Helps Hospital to view all registered Pregnant Patients.
+		///Parameters: 
+		///		$vaccineName: name of vaccine to be added
+		///		$startAge: The starting peroid of the vaccine
+		///		$endAge: the ending period of the vaccine
+		///		$durationType: the measurement of the period: month, week, or year.
+		///</summary>
+		function newVaccine($vaccineName,$startAge,$endAge,$durationType)
+		{
+			$this->db->set('vaccine_name',$vaccineName);
+			$this->db->set('startperiod',$endAge);
+			$this->db->set('endperiod',$endAge);
+			$this->db->set('hospital_id',$this->hospitalId);
+			$this->db->set('duration',$durationType);
+			$this->db->insert('vaccines');
+		}
+		
+		///<summary>
+		///Function Name: viewVaccine
+		/// Helps Hospital to view all vaccine.
+		///Parameters: 
+		///</summary>
+		function viewVaccines()
+		{
+			$this->db->where('hospital_id',$this->hospitalId);
+			$query = $this->db->get('vaccines');
+			return $query->result();
+		}
+		
+		///<summary>
+		///Function Name: editVaccine
+		/// Helps Hospital to view all vaccine.
+		///Parameters: 
+		///	
+		///</summary>
+		function deletePregnancyTip($pregnancyTipId)
+		{
+			$deletecriteria = array('hospital_id'=>$this->hospitalId,'tips_id'=>$pregnancyTipId);
+			$this->db->where($deletecriteria);
+			$this->db->delete('pregnancy_tips');
+		}
+		
+		
+		///<summary>
+		///Function Name: deleteVaccine
+		/// Helps Hospital to delete Vaccines
+		///Parameters: 
+		///		$vaccineId: identity for the the vaccine to be deleted.
+		///</summary>
+		function deleteVaccine($vaccineId)
+		{
+			$deletecriteria = array('hospital_id'=>$this->hospitalId,'vaccine_id'=>$vaccineId);
+			$this->db->where($deletecriteria);
+			$this->db->delete('vaccines');
+		}
+		
+		///<summary>
+		///Function Name: newPregnancyTip
+		/// Helps Hospital to create new Pregnancy Tip.
+		///Parameters: 
+		///		$tip: The message content of the tip
+		///		$frequency: how often the message would be sent to the patient
+		///		$maxAge: Maximum pregnancy age that the tip would be useful for.  
+		///		$minAge: the minimum pregnancy age that the tip would be useful for.
+		///</summary>
+		function newPregnancyTip($tip,$frequency,$maxAge,$minAge)
+		{
+			$this->db->set('tips',$tip);
+			$this->db->set('min_pregnancy_age',$minAge);
+			$this->db->set('max_pregnancy_age',$maxAge);
+			$this->db->set('frequency',$frequency);
+			$this->db->set('hospital_id',$this->hospitalId);
+			$this->db->insert('pregnancy_tips');
+		}
+		
+		///<summary>
+		///Function Name: viewPregnancyTips
+		/// Helps Hospital to view all pregnancy Tips.
+		///Parameters: none. 
+		///</summary>
+		function viewPregnancyTips()
+		{
+			$this->db->where('hospital_id',$this->hospitalId);
+			$query = $this->db->get('pregnancy_tips');
+			return $query->result();
+		}	
+		
+		///<summary>
+		///Function Name: preparePregnancyTips
+		/// Helps the System to prepare the Tips to be sent by calling the get_pregnancy_tips method. 
+		///Parameters: none. 
+		///</summary>
+		function preparePregnancyTips()
+		{			
+			$messages = array();
+			$i = 0;
+			foreach($this->get_pregnancy_tips() as $row)
+			{
+				$this->db->where("pregnancy_age >=",$row->min_pregnancy_age);
+				$this->db->where("pregnancy_age <=",$row->max_pregnancy_age);
+				$query = $this->db->get('patients');
+				foreach($query->result() as $newrow)
+				{
+					echo  $messages[$i] = 'Mrs. '.$newrow->patient_firstname.' '. $row->tips ."</br>";
+					 $i++;
+					
+				}
+			}
+			;
+		}
+		
+		///<summary>
+		///Function Name: get_pregnancy_tips
+		/// gets all the tips to be sent 
+		///Parameters: none. 
+		///</summary>
+		function get_pregnancy_tips()
+		{
+			$this->db->where('hospital_id',$this->hospitalId);
+			$query = $this->db->get('pregnancy_tips');
+			return $query->result();
+		}
+		
+		///<summary>
+		///Function Name: prepareVaccine
+		/// Helps the System to send Tips to be sent
+		///Parameters: none. 
+		///</summary>
+		function prepareVaccineMessage()
+		{
+			
+		}
+	}
+?>
